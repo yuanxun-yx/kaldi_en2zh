@@ -1,0 +1,1 @@
+../../../aishell/s5/local/score.sh
