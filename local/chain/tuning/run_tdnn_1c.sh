@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-# 1b is the same as 1a, except that 1b uses AISHELL's ivector
-# extractor instead of TED-LIUM's
+# 1c uses everything from AISHELL
 
 # modified from egs/rm/s5/local/chain/tuning/run_tdnn_wsj_rm_1a.sh
 
@@ -14,7 +13,7 @@ stage=0
 train_set=train_sp
 test_sets="dev test"
 get_egs_stage=-10
-dir=exp/chain/tdnn_tedlium_aishell_1b
+dir=exp/chain/tdnn_tedlium_aishell_1c
 # LSTM/chain options
 train_stage=-10
 xent_regularize=0.1
@@ -38,14 +37,13 @@ nnet_affix=_online_tedlium
 # model and dirs for source model used for transfer learning
 src_mdl=$TEDLIUM_ROOT/exp/chain_cleaned_1e/tdnn1e_sp/final.mdl # input chain model trained on source dataset (tedlium) and this model is transfered to the target domain.
 src_mfcc_config=$TEDLIUM_ROOT/conf/mfcc_hires.conf # mfcc config used to extract higher dim mfcc features used for ivector training in source domain.
+src_ivec_extractor_dir=$TEDLIUM_ROOT/exp/nnet3_cleaned_1e/extractor  # source ivector extractor dir used to extract ivector for source data and the ivector for target data is extracted using this extractor. It should be nonempty, if ivector is used in source model training.
 
 # dirs for src-to-tgt transfer experiment
-gmm=tri5a
-gmm_dir=exp/${gmm}
-ali_dir=exp/${gmm}_sp_ali
-tree_dir=exp/chain/tedlium_tree_sp
-lang=data/lang_chain_tedlium
-lat_dir=exp/tri5a_lats
+ali_dir=$AISHELL_ROOT/exp/tri5a_sp_ali
+tree_dir=$AISHELL_ROOT/exp/chain/tri6_7d_tree_sp
+lang=$AISHELL_ROOT/data/lang_chain
+lat_dir=$AISHELL_ROOT/exp/tri5a_sp_lats
 
 # End configuration section.
 
@@ -72,6 +70,7 @@ use_ivector=false
 ivector_dim=$(nnet3-am-info --print-args=false $src_mdl | grep "ivector-dim" | cut -d" " -f2)
 if [ -z $ivector_dim ]; then ivector_dim=0 ; fi
 
+
 for f in $required_files; do
   if [ ! -f $f ]; then
     echo "$0: no such file $f" && exit 1;
@@ -80,42 +79,7 @@ done
 
 ivector_dir=$AISHELL_ROOT/exp/nnet3/ivectors_${train_set}
 
-if [ $stage -le 0 ]; then
-  echo "$0: aligning with the perturbed low-resolution data"
-  steps/align_fmllr.sh --nj 30 --cmd "$train_cmd" \
-    $AISHELL_ROOT/data/${train_set} data/lang $gmm_dir $ali_dir || exit 1
-fi
-
 if [ $stage -le 1 ]; then
-  # Get the alignments as lattices (gives the chain training more freedom).
-  # use the same num-jobs as the alignments
-  nj=$(cat $ali_dir/num_jobs) || exit 1;
-  steps/align_fmllr_lats.sh --nj $nj --cmd "$train_cmd" $AISHELL_ROOT/data/${train_set} \
-    data/lang exp/tri5a $lat_dir || exit 1;
-  rm $lat_dir/fsts.*.gz 2>/dev/null || true # save space
-fi
-
-if [ $stage -le 2 ]; then
-  # Create a version of the lang/ directory that has one state per phone in the
-  # topo file. [note, it really has two states.. the first one is only repeated
-  # once, the second one has zero or more repeats.]
-  rm -r $lang 2>/dev/null || true
-  cp -r data/lang $lang
-  silphonelist=$(cat $lang/phones/silence.csl) || exit 1;
-  nonsilphonelist=$(cat $lang/phones/nonsilence.csl) || exit 1;
-  # Use our special topology... note that later on may have to tune this
-  # topology.
-  steps/nnet3/chain/gen_topo.py $nonsilphonelist $silphonelist >$lang/topo
-fi
-
-if [ $stage -le 3 ]; then
-  # Build a tree using our new topology.
-  steps/nnet3/chain/build_tree.sh --frame-subsampling-factor 3 \
-      --context-opts "--context-width=2 --central-position=1" \
-    --cmd "$train_cmd" 5000 $AISHELL_ROOT/data/${train_set} $lang $ali_dir $tree_dir || exit 1;
-fi
-
-if [ $stage -le 4 ]; then
   mkdir -p $dir
 
   echo "$0: creating neural net configs using the xconfig parser";
@@ -152,7 +116,7 @@ EOF
       nnet3-init --srand=1 - $dir/configs/final.config $dir/input.raw  || exit 1;
 fi
 
-if [ $stage -le 5 ]; then
+if [ $stage -le 2 ]; then
   echo "$0: generate egs for chain to train new model on rm dataset."
   if [[ $(hostname -f) == *.clsp.jhu.edu ]] && [ ! -d $dir/egs/storage ]; then
     utils/create_split_dir.pl \
@@ -189,15 +153,15 @@ if [ $stage -le 5 ]; then
     --dir $dir || exit 1;
 fi
 
-if [ $stage -le 6 ]; then
+if [ $stage -le 3 ]; then
   # Note: it might appear that this data/lang_chain directory is mismatched, and it is as
   # far as the 'topo' is concerned, but this script doesn't read the 'topo' from
   # the lang directory.
-  utils/mkgraph.sh --self-loop-scale 1.0 data/lang_test $dir $dir/graph
+  utils/mkgraph.sh --self-loop-scale 1.0 $AISHELL_ROOT/data/lang_test $dir $dir/graph
 fi
 
 graph_dir=$dir/graph
-if [ $stage -le 7 ]; then
+if [ $stage -le 4 ]; then
   for test_set in dev test; do
     steps/nnet3/decode.sh --acwt 1.0 --post-decode-acwt 10.0 \
       --nj 10 --cmd "$decode_cmd" \
