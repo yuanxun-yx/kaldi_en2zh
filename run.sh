@@ -167,7 +167,7 @@ fi
 if [ $stage -le 21 ]; then
   # This will only work if you have GPUs on your system (and note that it requires
   # you to have the queue set up the right way... see kaldi-asr.org/doc/queue.html)
-  local/chain/run_tdnn.sh --stage 7
+  local/chain/run_tdnn.sh
 fi
 
 if [ $stage -le 22 ]; then
