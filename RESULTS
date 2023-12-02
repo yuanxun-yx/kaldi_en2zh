@@ -7,4 +7,3 @@
 %WER 6.56 [ 6875 / 104765, 151 ins, 420 del, 6304 sub ] exp/chain/tdnn_tedlium_aishell_1a/decode_test/cer_12_0.5
 %WER 6.42 [ 6729 / 104765, 141 ins, 389 del, 6199 sub ] exp/chain/tdnn_tedlium_aishell_1b/decode_test/cer_11_1.0
 %WER 6.50 [ 6806 / 104765, 176 ins, 484 del, 6146 sub ] exp/chain/tdnn_tedlium_aishell_1c/decode_test/cer_13_0.5
-%WER 6.38 [ 6688 / 104765, 160 ins, 396 del, 6132 sub ] exp/chain/tdnn_tedlium_aishell_1d/decode_test/cer_12_0.5
