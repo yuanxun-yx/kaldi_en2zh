@@ -170,11 +170,5 @@ if [ $stage -le 21 ]; then
   local/chain/run_tdnn.sh
 fi
 
-if [ $stage -le 22 ]; then
-  # getting results (see RESULTS file)
-  for x in exp/*/decode_test; do [ -d $x ] && grep WER $x/cer_* | utils/best_wer.sh; done 2>/dev/null
-  for x in exp/*/*/decode_test; do [ -d $x ] && grep WER $x/cer_* | utils/best_wer.sh; done 2>/dev/null
-fi
-
 echo "$0: success."
 exit 0
